@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+
+# Keystore & signing
+release.keystore
+*.jks
+*.p12
+
+# Output APKs
+*.apk
+*.aab
+
+# IDE
+*.swp
+*.swo
+*~
+.vscode/
