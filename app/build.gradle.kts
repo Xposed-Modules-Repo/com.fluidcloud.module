@@ -4,7 +4,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -15,8 +15,8 @@ android {
         applicationId = "com.fluidcloud.module"
         minSdk = 33
         targetSdk = 37
-        versionCode = 1
-        versionName = "26.1"
+        versionCode = 2
+        versionName = "26.2"
     }
 
     signingConfigs {
@@ -45,12 +45,13 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
@@ -68,8 +69,11 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.miuix.ui)
     implementation(libs.miuix.preference)
+    implementation(libs.miuix.blur)
+    implementation(libs.miuix.icons)
     compileOnly(libs.libxposed.api)
     compileOnly(libs.lottie)
     compileOnly(libs.androidx.palette)

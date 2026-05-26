@@ -1,0 +1,15 @@
+package com.fluidcloud.module.ui.screen
+
+enum class DialogType {
+    LEFT_VALUE,
+    RIGHT_VALUE,
+    CARD_DIVIDER_HEIGHT,
+    CARD_HEIGHT,
+    CARD_CORNER_RADIUS,
+    ARTWORK_BG_COLOR,
+    CAPSULE_BG_COLOR,
+    CAPSULE_STROKE_COLOR,
+    MEDIA_CARD_STROKE_COLOR,
+    HOTSPOT_DURATION,
+    MUSIC_DURATION,
+}

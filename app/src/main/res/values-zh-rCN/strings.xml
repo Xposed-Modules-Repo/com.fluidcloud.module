@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FluidCloud</string>
+    <string name="app_description">ColorOS 16 流体云 UI 调整模块</string>
+
+    <!-- Dashboard -->
+    <string name="status_active">已激活</string>
+    <string name="status_loaded">已加载</string>
+    <string name="status_inactive">未激活</string>
+    <string name="version_info">版本 26.1  ·  ColorOS 16</string>
+
+    <!-- Preferences -->
+    <string name="enable_hook">启用 Hook</string>
+    <string name="enable_hook_summary">控制流体云 UI 修改是否生效</string>
+    <string name="restart_systemui">重启系统界面</string>
+    <string name="restart_systemui_summary">立即杀死两个作用域进程 使设置生效</string>
+
+    <!-- Capsule -->
+    <string name="left_margin">左边距</string>
+    <string name="right_margin">右边距</string>
+    <string name="capsule_height">胶囊宽度</string>
+    <string name="capsule_corner_radius">胶囊圆角</string>
+    <string name="cover_round_rect">封面圆角</string>
+    <string name="cover_round_rect_summary">将歌曲封面从圆形改为圆角矩形</string>
+    <string name="capsule_bg_color">胶囊背景色</string>
+    <string name="capsule_stroke_color">胶囊边框色</string>
+    <string name="hotspot_duration">热点胶囊持续时长</string>
+    <string name="music_duration">音乐胶囊持续时长</string>
+
+    <!-- Glow -->
+    <string name="gpu_glow_effect">GPU 边缘光效</string>
+    <string name="gpu_glow_enabled">流光溢彩效果已开启</string>
+    <string name="gpu_glow_disabled">关闭</string>
+    <string name="glow_speed">流光速度</string>
+    <string name="glow_intensity">光效强度</string>
+    <string name="glow_color_1">流光颜色 1</string>
+    <string name="glow_color_2">流光颜色 2</string>
+    <string name="glow_color_3">流光颜色 3</string>
+
+    <!-- Card -->
+    <string name="card_height">卡片高度</string>
+    <string name="card_spacing">卡片间距</string>
+    <string name="card_corner_radius">卡片圆角</string>
+    <string name="media_card_bg_color">媒体卡片背景色</string>
+    <string name="media_card_stroke_color">媒体卡片边框色</string>
+
+    <!-- Settings -->
+    <string name="floating_bottom_bar">悬浮底栏</string>
+    <string name="floating_bottom_bar_summary">iOS 风格悬浮导航栏</string>
+    <string name="liquid_glass">液态玻璃</string>
+    <string name="liquid_glass_summary">悬浮底栏毛玻璃模糊效果</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="light">浅色</string>
+    <string name="dark">深色</string>
+
+    <!-- Dialogs -->
+    <string name="reset">重置</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="enter_value">请输入数值</string>
+
+    <!-- Tabs -->
+    <string name="tab_dashboard">主页</string>
+    <string name="tab_capsule">胶囊</string>
+    <string name="tab_card">卡片</string>
+    <string name="tab_settings">设置</string>
+
+    <!-- Info -->
+    <string name="app_name_info">应用名称</string>
+    <string name="author">作者</string>
+    <string name="function">功能</string>
+    <string name="function_desc">调整 ColorOS 16 流体云 UI 布局、尺寸、颜色等参数，实现个性化定制。</string>
+    <string name="usage_guide">使用说明</string>
+    <string name="usage_guide_desc">修改参数后，点击「重启系统界面」或手动重启 SystemUI 即可生效。</string>
+    <string name="author_name">Coolapk@那泛滥的思绪</string>
+</resources>

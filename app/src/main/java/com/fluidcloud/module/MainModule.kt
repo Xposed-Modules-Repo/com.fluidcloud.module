@@ -1,18 +1,34 @@
 package com.fluidcloud.module
 
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Outline
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
+import android.view.ViewOutlineProvider
+import android.widget.FrameLayout
 
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
+import com.fluidcloud.module.glow.CapsuleGlowEngine
 
 class MainModule : XposedModule() {
+
+    companion object {
+        /** capsule foreground GradientDrawable -> target stroke color */
+        val gdStrokeColorMap = java.util.WeakHashMap<android.graphics.drawable.GradientDrawable, Int>()
+        /** prevent recursive setStroke calls */
+        private val inStrokeHook = ThreadLocal<Boolean>()
+
+        private const val CAPSULE_VIEW_CLS =
+            "com.oplus.systemui.plugins.seedling.capsule.ui.view.CapsuleView"
+    }
 
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
         Settings.ensureLoaded()
@@ -20,23 +36,34 @@ class MainModule : XposedModule() {
             "com.android.systemui" -> {
                 hookFluidCloud(param.defaultClassLoader)
                 hookCapsuleHeight()
+                hookCapsuleIconSize()
                 hookCardHeight()
                 hookCardDividerHeight()
                 hookCardCornerRadius()
+                hookCardBgCornerRadius()
                 hookCoverRoundRect()
                 hookBgCornerRadius()
                 hookFgCornerRadius()
-                hookArtworkBgColor(param.defaultClassLoader)
                 hookCapsuleStrokeColor()
+                hookCapsuleStrokeGradientDrawable()
                 hookMediaCardStrokeColor()
                 hookServiceConfigParsing()
-
+                hookSmoothRadiusOff()
+                hookCardFgCornerRadius()
+                hookCapsuleDraw()
+                hookCapsuleAttachState()
+                hookArtworkBgColor(param.defaultClassLoader)
+                hookMediaCardStrokeGradientDrawable()
             }
             "com.oplus.systemui.plugins" -> {
                 hookFluidCloud(param.defaultClassLoader)
             }
         }
     }
+
+    // =========================================================================
+    // Existing hooks (unchanged)
+    // =========================================================================
 
     private fun hookFluidCloud(classLoader: ClassLoader) {
         try {
@@ -63,26 +90,62 @@ class MainModule : XposedModule() {
     }
 
     private fun hookCapsuleHeight() {
+        val hookBody = object : XposedInterface.Hooker {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                if (!Settings.hookEnabled) return chain.proceed()
+                val res = chain.getThisObject() as? android.content.res.Resources
+                    ?: return chain.proceed()
+                val id = chain.getArgs()[0] as Int
+                val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
+                if (name != "capsule_max_height_size"
+                    && name != "capsule_layout_max_height"
+                    && name != "capsule_layout_max_height_small") return chain.proceed()
+                val px = android.util.TypedValue.applyDimension(
+                    android.util.TypedValue.COMPLEX_UNIT_DIP,
+                    Settings.capsuleHeight.toFloat(),
+                    res.displayMetrics
+                )
+                return (px + 0.5f).toInt()
+            }
+        }
         try {
-            val method = android.content.res.Resources::class.java
+            val m1 = android.content.res.Resources::class.java
+                .getMethod("getDimensionPixelOffset", Integer.TYPE)
+            hook(m1).intercept(hookBody)
+        } catch (_: Throwable) {}
+        try {
+            val m2 = android.content.res.Resources::class.java
                 .getMethod("getDimensionPixelSize", Integer.TYPE)
+            hook(m2).intercept(hookBody)
+        } catch (_: Throwable) {}
+    }
 
-            hook(method).intercept(object : XposedInterface.Hooker {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    if (!Settings.hookEnabled) return chain.proceed()
-                    val res = chain.getThisObject() as? android.content.res.Resources
-                        ?: return chain.proceed()
-                    val id = chain.getArgs()[0] as Int
-                    val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
-                    if (name != "capsule_layout_max_height") return chain.proceed()
-                    val px = android.util.TypedValue.applyDimension(
-                        android.util.TypedValue.COMPLEX_UNIT_DIP,
-                        Settings.capsuleHeight.toFloat(),
-                        res.displayMetrics
-                    )
-                    return (px + 0.5f).toInt()
-                }
-            })
+    private fun hookCapsuleIconSize() {
+        val hookBody = object : XposedInterface.Hooker {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                if (!Settings.hookEnabled) return chain.proceed()
+                val res = chain.getThisObject() as? android.content.res.Resources
+                    ?: return chain.proceed()
+                val id = chain.getArgs()[0] as Int
+                val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
+                if (name != "capsule_icon_size") return chain.proceed()
+                val px = android.util.TypedValue.applyDimension(
+                    android.util.TypedValue.COMPLEX_UNIT_DIP,
+                    Settings.capsuleIconSize.toFloat(),
+                    res.displayMetrics
+                )
+                return (px + 0.5f).toInt()
+            }
+        }
+        try {
+            val m1 = android.content.res.Resources::class.java
+                .getMethod("getDimensionPixelOffset", Integer.TYPE)
+            hook(m1).intercept(hookBody)
+        } catch (_: Throwable) {}
+        try {
+            val m2 = android.content.res.Resources::class.java
+                .getMethod("getDimensionPixelSize", Integer.TYPE)
+            hook(m2).intercept(hookBody)
         } catch (_: Throwable) {}
     }
 
@@ -146,7 +209,8 @@ class MainModule : XposedModule() {
                         ?: return chain.proceed()
                     val id = chain.getArgs()[0] as Int
                     val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
-                    if (name != "round_corner_radius_fluid_cloud") return chain.proceed()
+                    if (name != "round_corner_radius_fluid_cloud"
+                        && name != "card_corner_radius") return chain.proceed()
                     val px = android.util.TypedValue.applyDimension(
                         android.util.TypedValue.COMPLEX_UNIT_DIP,
                         Settings.cardCornerRadius.toFloat(),
@@ -158,11 +222,59 @@ class MainModule : XposedModule() {
         } catch (_: Throwable) {}
     }
 
+    /**
+     * Hook CardBackgroundView.setBackgroundDrawable to apply user's corner radius
+     * to the card background drawable (which has hardcoded 20dp in XML).
+     */
+    private fun hookCardBgCornerRadius() {
+        try {
+            val method = View::class.java.getMethod("setBackgroundDrawable", Drawable::class.java)
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val drawable = chain.getArgs()[0] as? Drawable ?: return chain.proceed()
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    val view = chain.getThisObject() as? View ?: return chain.proceed()
+                    if (view::class.java.name != "com.oplus.systemui.plugins.seedling.card.ui.view.CardBackgroundView") return chain.proceed()
+                    val gd = drawable as? GradientDrawable ?: return chain.proceed()
+                    val px = TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        Settings.cardCornerRadius.toFloat(),
+                        view.resources.displayMetrics
+                    )
+                    gd.setCornerRadius(px)
+                    return chain.proceed()
+                }
+            })
+        } catch (_: Throwable) {}
+    }
+
+    private fun hookCardFgCornerRadius() {
+        try {
+            val method = FrameLayout::class.java
+                .getMethod("setForeground", Drawable::class.java)
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val drawable = chain.getArgs()[0] as? Drawable ?: return chain.proceed()
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    val view = chain.getThisObject() as? View ?: return chain.proceed()
+                    if (view::class.java.name != "com.oplus.systemui.plugins.seedling.card.ui.view.CardView") return chain.proceed()
+                    val gd = drawable as? GradientDrawable ?: return chain.proceed()
+                    val px = TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        Settings.cardCornerRadius.toFloat(),
+                        view.resources.displayMetrics
+                    )
+                    gd.setCornerRadius(px)
+                    return chain.proceed()
+                }
+            })
+        } catch (_: Throwable) {}
+    }
+
     private fun hookCoverRoundRect() {
         try {
             val method = android.content.res.Resources::class.java
                 .getMethod("getString", Integer.TYPE)
-
             hook(method).intercept(object : XposedInterface.Hooker {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
                     if (!Settings.hookEnabled || !Settings.coverRoundRect) return chain.proceed()
@@ -170,8 +282,29 @@ class MainModule : XposedModule() {
                         ?: return chain.proceed()
                     val id = chain.getArgs()[0] as Int
                     val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
-                    if (name != "shapeArtworkCircle") return chain.proceed()
-                    return "round-rectangle"
+                    if (name == "shapeArtworkCircle" || name == "shapeArtworkRoundRectangle") {
+                        return "round-rectangle"
+                    }
+                    return chain.proceed()
+                }
+            })
+        } catch (_: Throwable) {}
+    }
+
+
+    /**
+     * Disable <smoothG2-weight> rendering when capsule radius != default 20dp,
+     * preserving smooth effect at the default radius to avoid ghost artifacts.
+     */
+    private fun hookSmoothRadiusOff() {
+        try {
+            val clazz = Class.forName("com.oplus.view.OplusSmoothRoundedManager")
+            val method = clazz.getMethod("isSmoothRadiusOn")
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    if (Settings.bgCornerRadius == 20) return chain.proceed()
+                    return false
                 }
             })
         } catch (_: Throwable) {}
@@ -182,16 +315,14 @@ class MainModule : XposedModule() {
             val method = View::class.java.getMethod("setBackground", Drawable::class.java)
             hook(method).intercept(object : XposedInterface.Hooker {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
-                    val result = chain.proceed()
-                    if (!Settings.hookEnabled) return result
-                    val view = chain.getThisObject() as? View ?: return result
-                    if (view::class.java.name !=
-                        "com.oplus.systemui.plugins.seedling.capsule.ui.view.CapsuleView"
-                    ) return result
-                    val bg = view.background as? GradientDrawable ?: return result
-                    bg.setCornerRadius(cornerRadiusPx(view))
-                    bg.setColor(Color.parseColor(Settings.capsuleBgColor))
-                    return result
+                    val drawable = chain.getArgs()[0] as? Drawable ?: return chain.proceed()
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    val view = chain.getThisObject() as? View ?: return chain.proceed()
+                    if (view::class.java.name != CAPSULE_VIEW_CLS) return chain.proceed()
+                    val gd = drawable as? GradientDrawable ?: return chain.proceed()
+                    gd.setCornerRadius(cornerRadiusPx(view))
+                    gd.setColor(Color.parseColor(Settings.capsuleBgColor))
+                    return chain.proceed()
                 }
             })
         } catch (_: Throwable) {}
@@ -199,22 +330,57 @@ class MainModule : XposedModule() {
 
     private fun hookFgCornerRadius() {
         try {
-            val method = android.widget.FrameLayout::class.java
+            val method = FrameLayout::class.java
                 .getMethod("setForeground", Drawable::class.java)
             hook(method).intercept(object : XposedInterface.Hooker {
                 override fun intercept(chain: XposedInterface.Chain): Any? {
-                    val result = chain.proceed()
-                    if (!Settings.hookEnabled) return result
-                    val view = chain.getThisObject() as? View ?: return result
-                    if (view::class.java.name !=
-                        "com.oplus.systemui.plugins.seedling.capsule.ui.view.CapsuleView"
-                    ) return result
-                    val fg = view.foreground as? GradientDrawable ?: return result
-                    fg.setCornerRadius(cornerRadiusPx(view))
-                    return result
+                    val drawable = chain.getArgs()[0] as? Drawable ?: return chain.proceed()
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    val view = chain.getThisObject() as? View ?: return chain.proceed()
+                    if (view::class.java.name != CAPSULE_VIEW_CLS) return chain.proceed()
+                    val gd = drawable as? GradientDrawable ?: return chain.proceed()
+                    gd.setCornerRadius(cornerRadiusPx(view))
+                    val strokeWidth = getCapsuleStrokeWidthPx(view)
+                    if (strokeWidth > 0) {
+                        val strokeColor = Color.parseColor(Settings.capsuleStrokeColor)
+                        gd.setStroke(strokeWidth, strokeColor)
+                    }
+                    Companion.gdStrokeColorMap.put(gd, Color.parseColor(Settings.capsuleStrokeColor))
+                    return chain.proceed()
                 }
             })
         } catch (_: Throwable) {}
+    }
+
+    /**
+     * Hook GradientDrawable.setStroke(width, color) to prevent CapsuleView's
+     * b(float) and bundle handler from overwriting our custom stroke color.
+     */
+    private fun hookCapsuleStrokeGradientDrawable() {
+        try {
+            val method = GradientDrawable::class.java.getMethod(
+                "setStroke", Integer.TYPE, Integer.TYPE
+            )
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    if (Companion.inStrokeHook.get() == true) return chain.proceed()
+                    val gd = chain.getThisObject() as? GradientDrawable ?: return chain.proceed()
+                    val targetColor = Companion.gdStrokeColorMap[gd] ?: return chain.proceed()
+                    Companion.inStrokeHook.set(true)
+                    try {
+                        val width = chain.getArgs()[0] as Int
+                        gd.setStroke(width, targetColor)
+                    } finally {
+                        Companion.inStrokeHook.set(false)
+                    }
+                    return null
+                }
+            })
+            Log.d("FluidCloud", "hookCapsuleStrokeGradientDrawable: OK")
+        } catch (e: Throwable) {
+            Log.w("FluidCloud", "hookCapsuleStrokeGradientDrawable failed", e)
+        }
     }
 
     private fun hookArtworkBgColor(classLoader: ClassLoader) {
@@ -250,34 +416,30 @@ class MainModule : XposedModule() {
     }
 
     private fun hookMediaCardStrokeColor() {
+        val hookBody: XposedInterface.Hooker = object : XposedInterface.Hooker {
+            override fun intercept(chain: XposedInterface.Chain): Any? {
+                if (!Settings.hookEnabled) return chain.proceed()
+                val res = chain.getThisObject() as? android.content.res.Resources ?: return chain.proceed()
+                val id = chain.getArgs()[0] as Int
+                val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
+                if (name != "default_stroke_color") return chain.proceed()
+                return Color.parseColor(Settings.mediaCardStrokeColor)
+            }
+        }
         try {
-            val method = android.content.res.Resources::class.java
+            val method2 = android.content.res.Resources::class.java
                 .getMethod("getColor", Integer.TYPE, android.content.res.Resources.Theme::class.java)
-            hook(method).intercept(object : XposedInterface.Hooker {
-                override fun intercept(chain: XposedInterface.Chain): Any? {
-                    if (!Settings.hookEnabled) return chain.proceed()
-                    val res = chain.getThisObject() as? android.content.res.Resources ?: return chain.proceed()
-                    val id = chain.getArgs()[0] as Int
-                    val name = try { res.getResourceEntryName(id) } catch (_: Throwable) { null }
-                    if (name != "default_stroke_color") return chain.proceed()
-                    return Color.parseColor(Settings.mediaCardStrokeColor)
-                }
-            })
+            hook(method2).intercept(hookBody)
+        } catch (_: Throwable) {}
+        try {
+            val method1 = android.content.res.Resources::class.java
+                .getMethod("getColor", Integer.TYPE)
+            hook(method1).intercept(hookBody)
         } catch (_: Throwable) {}
     }
 
     /**
      * Hook SharedPreferencesImpl.getStringSet() to intercept "rus_content_key" reads.
-     *
-     * The plugin stores capsule config as a Set<String> in SP, where each entry is:
-     *   [serviceId, attr1, attr2, ..., custom_capsule_duration, ...]
-     *
-     * We replace index 10 (custom_capsule_duration) for hotspot/music services
-     * with user-configured values from Settings.
-     *
-     * This is the single interception point covering ALL paths:
-     *   - XML re-parses → e() → f() → SP write → SP read → our hook
-     *   - Cached data  ──────────────────────→ SP read → our hook
      */
     private fun hookServiceConfigParsing() {
         try {
@@ -335,6 +497,115 @@ class MainModule : XposedModule() {
             Log.e("FluidCloud", "hookServiceConfigParsing: SP getStringSet failed", e)
         }
     }
+
+    // =========================================================================
+    // Glow hooks (draw overlay — no foreground modification)
+    // =========================================================================
+
+    /**
+     * Hook View.draw(Canvas) for CapsuleView to paint glow on top
+     * after the view has rendered its normal content.
+     */
+    private fun hookCapsuleDraw() {
+        try {
+            val method = View::class.java.getMethod("draw", Canvas::class.java)
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    if (!Settings.hookEnabled || !Settings.capsuleGlowEnabled) return result
+                    val view = chain.getThisObject() as? View ?: return result
+                    if (view::class.java.name != CAPSULE_VIEW_CLS) return result
+                    val canvas = chain.getArgs()[0] as? Canvas ?: return result
+                    CapsuleGlowEngine.drawGlow(canvas, view)
+                    return result
+                }
+            })
+            Log.d("FluidCloud", "hookCapsuleDraw: OK")
+        } catch (e: Throwable) {
+            Log.w("FluidCloud", "hookCapsuleDraw failed", e)
+        }
+    }
+
+    /**
+     * Hook CapsuleView attach/detach to start/stop the glow animation clock.
+     */
+    private fun hookCapsuleAttachState() {
+        try {
+            val onAttach = View::class.java.getMethod("onAttachedToWindow")
+            hook(onAttach).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val result = chain.proceed()
+                    if (!Settings.hookEnabled) return result
+                    val view = chain.getThisObject() as? View ?: return result
+                    if (view::class.java.name != CAPSULE_VIEW_CLS) return result
+                    view.outlineProvider = object : ViewOutlineProvider() {
+                        override fun getOutline(v: View, outline: Outline) {
+                            outline.setRoundRect(0, 0, v.width, v.height, cornerRadiusPx(v))
+                        }
+                    }
+                    if (Settings.capsuleGlowEnabled) {
+                        CapsuleGlowEngine.start()
+                    }
+                    return result
+                }
+            })
+
+            val onDetach = View::class.java.getMethod("onDetachedFromWindow")
+            hook(onDetach).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    val view = chain.getThisObject() as? View ?: return chain.proceed()
+                    if (view::class.java.name == CAPSULE_VIEW_CLS) {
+                        CapsuleGlowEngine.stop()
+                    }
+                    return chain.proceed()
+                }
+            })
+            Log.d("FluidCloud", "hookCapsuleAttachState: OK")
+        } catch (e: Throwable) {
+            Log.w("FluidCloud", "hookCapsuleAttachState failed", e)
+        }
+    }
+
+    /**
+     * Hook GradientDrawable.setStroke(width, color) to intercept media card
+     * border strokes from BaseTemplateView.showStroke().
+     * Catches both the fallback (Resources.getColor) and primary path
+     * (server-provided color string → Color.parseColor).
+     */
+    private fun hookMediaCardStrokeGradientDrawable() {
+        try {
+            val method = GradientDrawable::class.java.getMethod(
+                "setStroke", Integer.TYPE, Integer.TYPE
+            )
+            hook(method).intercept(object : XposedInterface.Hooker {
+                override fun intercept(chain: XposedInterface.Chain): Any? {
+                    if (!Settings.hookEnabled) return chain.proceed()
+                    if (!Thread.currentThread().stackTrace.any { frame ->
+                            frame.className == "com.oplus.ule.lite.template.base.r"
+                            && frame.methodName == "showStroke"
+                        }) return chain.proceed()
+                    val newColor = Color.parseColor(Settings.mediaCardStrokeColor)
+                    chain.getArgs()[1] = newColor
+                    return chain.proceed()
+                }
+            })
+            Log.d("FluidCloud", "hookMediaCardStrokeGradientDrawable: OK")
+        } catch (e: Throwable) {
+            Log.w("FluidCloud", "hookMediaCardStrokeGradientDrawable failed", e)
+        }
+    }
+
+    // =========================================================================
+    // Utility
+    // =========================================================================
+
+    private fun getCapsuleStrokeWidthPx(view: View): Int = try {
+        view.resources.getDimensionPixelSize(
+            view.resources.getIdentifier(
+                "capsule_stroke_width", "dimen", "com.oplus.systemui.plugins"
+            )
+        )
+    } catch (_: Throwable) { 0 }
 
     private fun cornerRadiusPx(view: View): Float = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP,
