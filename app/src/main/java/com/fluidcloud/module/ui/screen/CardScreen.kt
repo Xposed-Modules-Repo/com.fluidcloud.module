@@ -49,7 +49,7 @@ fun CardScreen(
                 bottom = bottomPadding
             )
         ) {
-            item {
+            item(key = "layout_card") {
                 Card {
                     ArrowPreference(
                         title = "卡片高度", summary = viewModel.cardHeight.toInt().toString(),
@@ -65,8 +65,8 @@ fun CardScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer1") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "color_card") {
                 Card {
                     ArrowPreference(
                         title = "媒体卡片背景色", summary = viewModel.artworkBgColor,

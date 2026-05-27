@@ -56,7 +56,7 @@ fun AboutScreen(
                 bottom = bottomPadding
             )
         ) {
-            item {
+            item(key = "theme_card") {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     TabRow(
                         tabs = themeModeOptions,
@@ -66,8 +66,8 @@ fun AboutScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer1") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "bar_card") {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     SwitchPreference(
                         title = "悬浮底栏", summary = "iOS 风格悬浮导航栏",

@@ -1,5 +1,6 @@
 -keep class com.fluidcloud.module.** { *; }
 -keep class io.github.libxposed.api.** { *; }
+-keep class io.github.libxposed.service.** { *; }
 -keepclassmembers class * {
     @io.github.libxposed.api.annotations.* <methods>;
 }

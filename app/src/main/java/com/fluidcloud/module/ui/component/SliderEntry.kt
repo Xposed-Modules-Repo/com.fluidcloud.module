@@ -16,7 +16,8 @@ fun SliderEntry(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int,
     format: String = "%.0f",
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
 ) {
     BasicComponent(
         endActions = {
@@ -35,6 +36,7 @@ fun SliderEntry(
             valueRange = valueRange,
             steps = steps,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished ?: {},
             modifier = Modifier.padding(top = 4.dp)
         )
     }

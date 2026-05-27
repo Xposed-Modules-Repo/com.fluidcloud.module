@@ -499,12 +499,11 @@ class MainModule : XposedModule() {
     }
 
     // =========================================================================
-    // Glow hooks (draw overlay — no foreground modification)
+    // Glow hooks (AGSL overlay)
     // =========================================================================
 
     /**
-     * Hook View.draw(Canvas) for CapsuleView to paint glow on top
-     * after the view has rendered its normal content.
+     * Hook View.draw(Canvas) for CapsuleView to paint glow on top.
      */
     private fun hookCapsuleDraw() {
         try {
@@ -527,7 +526,7 @@ class MainModule : XposedModule() {
     }
 
     /**
-     * Hook CapsuleView attach/detach to start/stop the glow animation clock.
+     * Hook CapsuleView attach/detach for glow animation.
      */
     private fun hookCapsuleAttachState() {
         try {

@@ -1,5 +1,7 @@
 package com.fluidcloud.module.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,7 +54,7 @@ fun CapsuleScreen(
                 bottom = bottomPadding
             )
         ) {
-            item {
+            item(key = "margin_card") {
                 Card {
                     ArrowPreference(
                         title = "左边距",
@@ -66,23 +68,26 @@ fun CapsuleScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer1") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "capsule_card") {
                 Card {
                     SliderEntry(
                         label = "胶囊宽度", value = viewModel.capsuleHeight,
-                        valueRange = 0f..200f, steps = 200,
-                        onValueChange = { viewModel.applyCapsuleHeight(it) }
+                        valueRange = 0f..50f, steps = 50,
+                        onValueChange = { viewModel.applyCapsuleHeight(it) },
+                        onValueChangeFinished = { viewModel.commitCapsuleHeight() }
                     )
                     SliderEntry(
                         label = "胶囊圆角", value = viewModel.bgCornerRadius,
                         valueRange = 0f..20f, steps = 20,
-                        onValueChange = { viewModel.applyBgCornerRadius(it) }
+                        onValueChange = { viewModel.applyBgCornerRadius(it) },
+                        onValueChangeFinished = { viewModel.commitBgCornerRadius() }
                     )
                     SliderEntry(
                         label = "专辑图标大小", value = viewModel.capsuleIconSize,
                         valueRange = 0f..30f, steps = 30,
-                        onValueChange = { viewModel.applyCapsuleIconSize(it) }
+                        onValueChange = { viewModel.applyCapsuleIconSize(it) },
+                        onValueChangeFinished = { viewModel.commitCapsuleIconSize() }
                     )
                     SwitchPreference(
                         title = "封面圆角", summary = "将歌曲封面从圆形改为圆角矩形",
@@ -91,8 +96,8 @@ fun CapsuleScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer2") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "color_card") {
                 Card {
                     ArrowPreference(
                         title = "胶囊背景色", summary = viewModel.capsuleBgColor,
@@ -104,8 +109,8 @@ fun CapsuleScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer3") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "glow_card") {
                 Card {
                     SwitchPreference(
                         title = "GPU 边缘光效",
@@ -113,27 +118,27 @@ fun CapsuleScreen(
                         checked = viewModel.capsuleGlowEnabled,
                         onCheckedChange = { viewModel.applyCapsuleGlowEnabled(it) }
                     )
-                }
-            }
-            if (viewModel.capsuleGlowEnabled) {
-                item { Spacer(Modifier.height(6.dp)) }
-                item {
-                    Card {
-                        SliderEntry(
-                            label = "流光速度", value = viewModel.capsuleGlowSpeed,
-                            valueRange = 0f..1f, steps = 100, format = "%.2f",
-                            onValueChange = { viewModel.applyCapsuleGlowSpeed(it) }
-                        )
-                        SliderEntry(
-                            label = "光效强度", value = viewModel.capsuleGlowIntensity,
-                            valueRange = 0.0f..3.0f, steps = 300, format = "%.2f",
-                            onValueChange = { viewModel.applyCapsuleGlowIntensity(it) }
-                        )
+                    AnimatedVisibility(visible = viewModel.capsuleGlowEnabled) {
+                        Column {
+                            Spacer(Modifier.height(6.dp))
+                            SliderEntry(
+                                label = "流光速度", value = viewModel.capsuleGlowSpeed,
+                                valueRange = 0f..1f, steps = 100, format = "%.2f",
+                                onValueChange = { viewModel.applyCapsuleGlowSpeed(it) },
+                                onValueChangeFinished = { viewModel.commitCapsuleGlowSpeed() }
+                            )
+                            SliderEntry(
+                                label = "光效强度", value = viewModel.capsuleGlowIntensity,
+                                valueRange = 0.0f..3.0f, steps = 300, format = "%.2f",
+                                onValueChange = { viewModel.applyCapsuleGlowIntensity(it) },
+                                onValueChangeFinished = { viewModel.commitCapsuleGlowIntensity() }
+                            )
+                        }
                     }
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer4") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "duration_card") {
                 Card {
                     ArrowPreference(
                         title = "热点胶囊持续时长", summary = formatMin(viewModel.hotspotDurationMin),

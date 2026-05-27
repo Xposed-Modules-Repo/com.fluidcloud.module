@@ -27,11 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
@@ -51,7 +49,6 @@ fun ValueInputDialog(
 ) {
     var text by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(show) {
         if (show) {
@@ -75,11 +72,11 @@ fun ValueInputDialog(
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(start = 8.dp, end = 8.dp, bottom = 16.dp)
+                    .padding(start = 4.dp, end = 4.dp, bottom = 8.dp)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(28.dp))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Text(text = title, style = MiuixTheme.textStyles.title3)
                     Spacer(Modifier.height(16.dp))
                     TextField(
@@ -127,9 +124,7 @@ fun ValueInputDialog(
             }
         }
         LaunchedEffect(Unit) {
-            delay(100)
             focusRequester.requestFocus()
-            keyboardController?.show()
         }
     }
 }

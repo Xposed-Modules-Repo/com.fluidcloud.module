@@ -15,8 +15,9 @@ android {
         applicationId = "com.fluidcloud.module"
         minSdk = 33
         targetSdk = 37
-        versionCode = 2
-        versionName = "26.2"
+        versionCode = 3
+        versionName = "26.1.1"
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     signingConfigs {
@@ -74,6 +75,7 @@ dependencies {
     implementation(libs.miuix.preference)
     implementation(libs.miuix.blur)
     implementation(libs.miuix.icons)
+    implementation(libs.libxposed.service)
     compileOnly(libs.libxposed.api)
     compileOnly(libs.lottie)
     compileOnly(libs.androidx.palette)

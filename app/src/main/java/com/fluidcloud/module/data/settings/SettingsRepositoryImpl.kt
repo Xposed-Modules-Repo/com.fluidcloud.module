@@ -1,11 +1,13 @@
 package com.fluidcloud.module.data.settings
 
-import android.util.Log
+import com.fluidcloud.module.App
 import com.fluidcloud.module.domain.settings.FluidSettings
 import com.fluidcloud.module.domain.settings.SettingsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -23,10 +25,8 @@ class SettingsRepositoryImpl : SettingsRepository {
     override val settings: Flow<FluidSettings> = _settings.asStateFlow()
     override val isModuleLoaded: Flow<Boolean> = _isModuleLoaded.asStateFlow()
 
-    private var loaded = false
-
     init {
-        ensureLoaded()
+        loadConfigSync()
     }
 
     override suspend fun getSettings(): FluidSettings = _settings.value
@@ -38,16 +38,33 @@ class SettingsRepositoryImpl : SettingsRepository {
     }
 
     override suspend fun forceReload() {
-        loaded = false
-        ensureLoaded()
+        _isModuleLoaded.value = withContext(Dispatchers.IO) { checkActive() }
+        loadConfig()
     }
 
-    private fun ensureLoaded() {
-        if (loaded) return
+    /** Check if module is loaded via XposedServiceHelper. */
+    private fun checkActive(): Boolean = try {
+        App.instance.isModuleActive()
+    } catch (_: Exception) { false }
+
+    private var configLoaded = false
+
+    /** Synchronous config load (no module check). */
+    private fun loadConfigSync() {
+        if (configLoaded) return
+        loadConfigFromFile()
+        configLoaded = true
+    }
+
+    /** Async config load with module check. */
+    private suspend fun loadConfig() {
+        loadConfigFromFile()
+    }
+
+    private fun loadConfigFromFile() {
         try {
             val file = File(SHARED_PATH)
             if (file.exists()) {
-                _isModuleLoaded.value = true
                 val json = JSONObject(file.readText())
                 _settings.value = FluidSettings(
                     themeMode = json.optInt("themeMode", 0),
@@ -75,7 +92,6 @@ class SettingsRepositoryImpl : SettingsRepository {
                 )
             }
         } catch (_: Exception) {}
-        loaded = true
     }
 
     private fun persistToFile() {

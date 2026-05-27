@@ -95,9 +95,10 @@ object CapsuleGlowEngine {
         blurPaint.shader = sweepGrad
 
         val layers = listOf(
-            Triple(sw * 3f,   40f * intensity,  BlurMaskFilter(sw * 3f,   BlurMaskFilter.Blur.NORMAL)),
-            Triple(sw * 1.8f, 80f * intensity,  BlurMaskFilter(sw * 1.8f, BlurMaskFilter.Blur.NORMAL)),
-            Triple(sw * 0.6f, 160f * intensity, null),
+            Triple(sw * 4f,   25f * intensity,  BlurMaskFilter(sw * 4f,   BlurMaskFilter.Blur.NORMAL)),
+            Triple(sw * 2.5f, 50f * intensity,  BlurMaskFilter(sw * 2.5f, BlurMaskFilter.Blur.NORMAL)),
+            Triple(sw * 1.5f, 100f * intensity, BlurMaskFilter(sw * 1.5f, BlurMaskFilter.Blur.NORMAL)),
+            Triple(sw * 0.8f, 180f * intensity, null),
         )
         for ((width, alpha, filter) in layers) {
             blurPaint.strokeWidth = width
@@ -121,7 +122,7 @@ object CapsuleGlowEngine {
             shader.setFloatUniform("uIntensity", intensity)
             for (i in 0..5) shader.setColorUniform("uColor${i + 1}", colors[i])
             agslPaint.shader = shader
-            val blend = (60 * intensity).toInt().coerceIn(0, 180)
+            val blend = (80 * intensity).toInt().coerceIn(0, 200)
             agslPaint.alpha = blend
             canvas.drawRoundRect(l, t, r, b, cr, cr, agslPaint)
         } catch (e: Throwable) {
@@ -148,15 +149,43 @@ object CapsuleGlowEngine {
         uniform half4   uColor5;
         uniform half4   uColor6;
 
+        float hash(float2 p) {
+            return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+        }
+
+        float noise(float2 p) {
+            float2 i = floor(p);
+            float2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            float a = hash(i);
+            float b = hash(i + float2(1.0, 0.0));
+            float c = hash(i + float2(0.0, 1.0));
+            float d = hash(i + float2(1.0, 1.0));
+            return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
+        float fbm(float2 p) {
+            float v = 0.0;
+            float a = 0.5;
+            for (int i = 0; i < 4; i++) {
+                v += a * noise(p);
+                p *= 2.0;
+                a *= 0.5;
+            }
+            return v;
+        }
+
         half4 grad6(float t) {
-            float T = t * 5.0;
+            float T = t * 6.0;
             float i = floor(T);
             float f = T - i;
+            f = f * f * (3.0 - 2.0 * f);
             if (i < 1.0) return mix(uColor1, uColor2, f);
             if (i < 2.0) return mix(uColor2, uColor3, f);
             if (i < 3.0) return mix(uColor3, uColor4, f);
             if (i < 4.0) return mix(uColor4, uColor5, f);
-            return mix(uColor5, uColor6, f);
+            if (i < 5.0) return mix(uColor5, uColor6, f);
+            return mix(uColor6, uColor1, f);
         }
 
         half4 main(float2 coord) {
@@ -168,17 +197,54 @@ object CapsuleGlowEngine {
             float2 d   = abs(coord - ctr) - hsz;
             float2 clp = max(d, float2(0.0, 0.0));
             float  sdf = length(clp) + min(max(d.x, d.y), 0.0);
+            float absSdf = abs(sdf);
 
-            float glowWidth = min(size.x, size.y) * 0.04;
-            float alpha = (1.0 - smoothstep(0.0, glowWidth, abs(sdf))) * uIntensity;
+            float glowWidth = min(size.x, size.y) * 0.06;
+            float innerGlow = 1.0 - smoothstep(0.0, glowWidth * 0.3, absSdf);
+            float midGlow = 1.0 - smoothstep(0.0, glowWidth * 0.6, absSdf);
+            float outerGlow = 1.0 - smoothstep(0.0, glowWidth, absSdf);
+
+            float glow = innerGlow * 1.0 + midGlow * 0.5 + outerGlow * 0.2;
+            glow = clamp(glow, 0.0, 1.5);
+
+            float2 dir = coord - ctr;
+            float angle = atan(dir.y, dir.x);
+            float normAngle = angle * 0.1591549;
+
+            float flowInner = fract(normAngle - uTime * 0.15);
+            float flowOuter = fract(normAngle + uTime * 0.1);
+            float flowMix = mix(flowInner, flowOuter, innerGlow * 0.6);
+
+            float breathe = sin(uTime * 0.8) * 0.5 + 0.5;
+            float wave = sin(normAngle * 6.28318 * 2.0 + uTime * 1.5) * 0.5 + 0.5;
+            float flow = fract(flowMix + wave * 0.15 * breathe);
+
+            float2 noiseCoord = coord * 0.008 + float2(uTime * 0.08, uTime * 0.05);
+            float n = fbm(noiseCoord) * 0.25 + 0.75;
+
+            half4 color1 = grad6(flow);
+            half4 color2 = grad6(fract(flow + 0.5));
+            half4 color = mix(color1, color2, breathe * 0.3);
+
+            color *= n;
+
+            float pulse1 = sin(uTime * 2.0) * 0.08 + 0.92;
+            float pulse2 = sin(uTime * 4.0 + 2.0) * 0.06 + 0.94;
+            float pulse3 = sin(uTime * 0.7) * 0.12 + 0.88;
+            color *= pulse1 * pulse2 * pulse3;
+
+            float sparkle1 = noise(coord * 0.15 + uTime * 1.5);
+            sparkle1 = pow(sparkle1, 10.0) * 3.0;
+            float sparkle2 = noise(coord * 0.2 - uTime * 2.0);
+            sparkle2 = pow(sparkle2, 12.0) * 2.0;
+            color += half4((sparkle1 + sparkle2) * 0.25);
+
+            float edgeHighlight = exp(-absSdf * 0.4) * 0.35;
+            color += half4(edgeHighlight * 0.8);
+
+            float alpha = glow * uIntensity;
             if (alpha < 0.003) return half4(0.0);
 
-            float2 dir  = coord - ctr;
-            float angle = atan(dir.y, dir.x);
-            float flow  = fract(angle * 0.1591549 + uTime);
-
-            half4 color = grad6(flow);
-            color *= (sin(uTime * 2.0) * 0.1 + 0.9);
             return half4(color.rgb * alpha, alpha);
         }
     """.trimIndent()

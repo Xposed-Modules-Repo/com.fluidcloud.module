@@ -16,11 +16,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,17 +48,17 @@ import com.fluidcloud.module.ui.theme.statusCardBgInactiveDark
 import com.fluidcloud.module.ui.theme.statusCardBgInactiveLight
 import com.fluidcloud.module.ui.theme.statusIconActive
 import com.fluidcloud.module.ui.theme.statusIconDeactivated
-import com.fluidcloud.module.ui.TestNotificationService
 
 @Composable
 fun DashboardScreen(
     viewModel: SettingsViewModel,
     bottomPadding: Dp = 0.dp
 ) {
+    LaunchedEffect(Unit) { viewModel.load() }
+
     val moduleLoaded = viewModel.isModuleLoaded
     val hookEnabled = viewModel.hookEnabled
     val isActive = moduleLoaded && hookEnabled
-    val context = LocalContext.current
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
@@ -82,15 +83,15 @@ fun DashboardScreen(
                 bottom = bottomPadding
             )
         ) {
-            item {
+            item(key = "status_card") {
                 FluidStatusCard(
                     isActive = isActive,
                     isModuleLoaded = moduleLoaded,
                     onClick = { viewModel.toggleHook() }
                 )
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer1") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "hook_card") {
                 Card {
                     SwitchPreference(
                         title = "启用 Hook",
@@ -105,23 +106,8 @@ fun DashboardScreen(
                     )
                 }
             }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
-                Card {
-                    ArrowPreference(
-                        title = "发送测试通知",
-                        summary = "发送一条测试通知来预览流体云效果",
-                        onClick = { TestNotificationService.start(context) }
-                    )
-                    ArrowPreference(
-                        title = "关闭测试通知",
-                        summary = "停止测试",
-                        onClick = { TestNotificationService.stop(context) }
-                    )
-                }
-            }
-            item { Spacer(Modifier.height(SectionSpacing)) }
-            item {
+            item(key = "spacer2") { Spacer(Modifier.height(SectionSpacing)) }
+            item(key = "info_card") {
                 Card {
                     BasicComponent(title = "应用名称", summary = "FluidCloud")
                     BasicComponent(title = "作者", summary = "Coolapk@那泛滥的思绪")
@@ -139,7 +125,8 @@ private fun FluidStatusCard(
     isModuleLoaded: Boolean,
     onClick: () -> Unit
 ) {
-    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    val isDark = remember(surfaceColor) { surfaceColor.luminance() < 0.5f }
 
     val containerColor = if (isModuleLoaded) {
         if (isDark) statusCardBgActiveDark else statusCardBgActiveLight

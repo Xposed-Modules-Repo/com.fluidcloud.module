@@ -11,7 +11,6 @@ object Settings {
     // Theme mode: 0 = follow system, 1 = light, 2 = dark
     var themeMode = 0
 
-    // Read-only: true if the shared config was found, meaning the module process has run
     var isModuleLoaded = false
         private set
 
@@ -58,9 +57,10 @@ object Settings {
     fun ensureLoaded() {
         if (loaded) return
         try {
+            isModuleLoaded = true
+            try { File("/data/local/tmp/fluidcloud.active").writeText("") } catch (_: Exception) {}
             val file = File(SHARED_PATH)
             if (file.exists()) {
-                isModuleLoaded = true
                 val json = org.json.JSONObject(file.readText())
                 themeMode = json.optInt("themeMode", 0)
                 enableFloatingBottomBar = json.optBoolean("enableFloatingBottomBar", true)

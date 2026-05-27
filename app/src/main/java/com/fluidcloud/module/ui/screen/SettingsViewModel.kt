@@ -100,9 +100,14 @@ class SettingsViewModel(
 
     fun applyLeftValue(v: Float) { leftValue = v; persist { it.copy(leftValue = v) } }
     fun applyRightValue(v: Float) { rightValue = v; persist { it.copy(rightValue = v) } }
-    fun applyCapsuleHeight(v: Float) { capsuleHeight = v; persist { it.copy(capsuleHeight = v.roundToInt()) } }
-    fun applyCapsuleIconSize(v: Float) { capsuleIconSize = v; persist { it.copy(capsuleIconSize = v.roundToInt()) } }
-    fun applyBgCornerRadius(v: Float) { bgCornerRadius = v; persist { it.copy(bgCornerRadius = v.roundToInt()) } }
+
+    // Slider: immediate local update
+    fun applyCapsuleHeight(v: Float) { capsuleHeight = v }
+    fun commitCapsuleHeight() { persist { it.copy(capsuleHeight = capsuleHeight.roundToInt()) } }
+    fun applyCapsuleIconSize(v: Float) { capsuleIconSize = v }
+    fun commitCapsuleIconSize() { persist { it.copy(capsuleIconSize = capsuleIconSize.roundToInt()) } }
+    fun applyBgCornerRadius(v: Float) { bgCornerRadius = v }
+    fun commitBgCornerRadius() { persist { it.copy(bgCornerRadius = bgCornerRadius.roundToInt()) } }
     fun applyCoverRoundRect(v: Boolean) { coverRoundRect = v; persist { it.copy(coverRoundRect = v) } }
     fun applyCardDividerHeight(v: Float) { cardDividerHeight = v; persist { it.copy(cardDividerHeight = v.roundToInt()) } }
     fun applyCardHeight(v: Float) { cardHeight = v; persist { it.copy(cardHeight = v.roundToInt()) } }
@@ -114,8 +119,12 @@ class SettingsViewModel(
     fun applyHotspotDurationMin(v: Float) { hotspotDurationMin = v; persist { it.copy(hotspotCapsuleDuration = (v * 60000).roundToInt()) } }
     fun applyMusicDurationMin(v: Float) { musicDurationMin = v; persist { it.copy(musicCapsuleDuration = (v * 60000).roundToInt()) } }
     fun applyCapsuleGlowEnabled(v: Boolean) { capsuleGlowEnabled = v; persist { it.copy(capsuleGlowEnabled = v) } }
-    fun applyCapsuleGlowSpeed(v: Float) { capsuleGlowSpeed = v; persist { it.copy(capsuleGlowSpeed = v) } }
-    fun applyCapsuleGlowIntensity(v: Float) { capsuleGlowIntensity = v; persist { it.copy(capsuleGlowIntensity = v) } }
+
+    // Glow sliders: immediate local update
+    fun applyCapsuleGlowSpeed(v: Float) { capsuleGlowSpeed = v }
+    fun commitCapsuleGlowSpeed() { persist { it.copy(capsuleGlowSpeed = capsuleGlowSpeed) } }
+    fun applyCapsuleGlowIntensity(v: Float) { capsuleGlowIntensity = v }
+    fun commitCapsuleGlowIntensity() { persist { it.copy(capsuleGlowIntensity = capsuleGlowIntensity) } }
 
     private fun persist(transform: (FluidSettings) -> FluidSettings) {
         scope.launch { repository.updateSettings(transform) }
